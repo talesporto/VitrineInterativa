@@ -11,7 +11,7 @@ import org.openkinect.processing.*;
 
 
 int cuantos = 8000;
-pelo[] lista ;
+Pelo[] lista ;
 float[] z = new float[cuantos]; 
 float[] phi = new float[cuantos]; 
 float[] largos = new float[cuantos]; 
@@ -28,13 +28,12 @@ void setup() {
   size(640, 480, OPENGL);
   radio = height/3.5;
   
-  lista = new pelo[cuantos];
+  lista = new Pelo[cuantos];
   for (int i=0; i<cuantos; i++){
-    lista[i] = new pelo();
+    lista[i] = new Pelo();
   }
   noiseDetail(3);
   
-//    size(640,520);
   kinect = new Kinect(this);
   tracker = new KinectTracker();
 
@@ -45,15 +44,15 @@ void draw() {
   translate(width/2,height/2);
 
   tracker.track();
+  tracker.display();
 
   // Let's draw the raw location
-  PVector v1 = tracker.getPos();
-  PVector v2 = tracker.getLerpedPos();
+  PVector vPos = tracker.getPos();
+  PVector vLerpedPos = tracker.getLerpedPos();
+  float rxp = (((vLerpedPos.x)-(width/2))*0.005);
+  float ryp = (((vLerpedPos.y)-(height/2))*0.005);
 //  float rxp = ((mouseX-(width/2))*0.005);
 //  float ryp = ((mouseY-(height/2))*0.005);
-  
-  float rxp = (((v2.x)-(width/2))*0.005);
-  float ryp = (((v2.y)-(height/2))*0.005);
   
   rx = (rx*0.7)+(rxp*0.3);
   ry = (ry*0.7)+(ryp*0.3);
@@ -67,9 +66,8 @@ void draw() {
     lista[i].dibujar();
   }
   
-  println("mouse = x -> " + mouseX + " y -> " +  mouseY);  
-  println("v1 = x -> " + v1.x + " y -> " +  v1.y);
-  println("v2 = x -> " + v2.x + " y -> " +  v2.y);
+  println("vPos = x -> " + vPos.x + " y -> " +  vPos.y);
+  println("vLerpedPos = x -> " + vLerpedPos.x + " y -> " +  vLerpedPos.y);
 }
 
 void stop() {
@@ -78,8 +76,7 @@ void stop() {
 }
 
 
-class pelo
-{
+class Pelo {
   float z = random(-radio,radio);
   float phi = random(TWO_PI);
   float largo = random(1.15,1.2);
@@ -114,14 +111,14 @@ class pelo
     endShape();
   }
 }
+
 class KinectTracker {
-
-
 
   // Size of kinect image
   int kw = 640;
   int kh = 480;
-  int threshold = 700;
+  int minThreshold = 50;
+  int threshold = 800;
 
   // Raw location
   PVector loc;
@@ -134,7 +131,6 @@ class KinectTracker {
 
   // Last depth data
   int[] lastDepth;
-
 
   PImage display;
 
@@ -170,14 +166,17 @@ class KinectTracker {
         int offset = kw-x-1+y*kw;
         // Grabbing the raw depth
         int rawDepth = 0;
-        if(lastDepth == null) {
-          rawDepth = depth[offset];
-        } else if((depth[offset] - lastDepth[offset]) > 550) {
-          rawDepth = depth[offset] - lastDepth[offset];
-        }
+
+        rawDepth = depth[offset];
+
+//        if(lastDepth == null) {
+//          rawDepth = depth[offset];
+//        } else if((depth[offset] - lastDepth[offset]) > 550) {
+//          rawDepth = depth[offset] - lastDepth[offset];
+//        }
 
         // Testing against threshold
-        if (rawDepth != 0 && rawDepth < threshold) {
+        if (rawDepth > minThreshold && rawDepth < threshold) {
           sumX += x;
           sumY += y;
           count++;
@@ -222,11 +221,10 @@ class KinectTracker {
         int rawDepth = depth[offset];
 
         int pix = x+y*display.width;
-        if (rawDepth < threshold) {
+        if (rawDepth > minThreshold && rawDepth < threshold) {
           // A red color instead
           display.pixels[pix] = color(150,50,50);
-        } 
-        else {
+        } else {
           display.pixels[pix] = img.pixels[offset];
         }
       }
